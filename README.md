@@ -1,50 +1,89 @@
 # ValueForge
 
-Turn customer interview notes into a prioritised problem brief with a payback estimate. It extracts themes, pain intensity and quantified costs (like "40 minutes" or "6 reports a week") from the notes themselves and exports a PDF or Markdown brief.
+**Turn customer interviews into a ranked problem list, a value statement and a payback estimate. Every claim traces to a quote.**
 
-## How it works
+![Node 22+](https://img.shields.io/badge/node-22%2B-3c873a) ![tests](https://img.shields.io/badge/tests-14%20passing-2ea44f) ![no LLM](https://img.shields.io/badge/analysis-rule--based%2C%20no%20LLM-0b6e4f) ![style](https://img.shields.io/badge/UI-minimalist-222222)
 
-- **Analysis:** rule-based NLP with no LLM. A theme lexicon, pain-word intensity, a quantity parser for durations and frequencies, and TF-IDF keywords. Every quote shown is verbatim from your notes.
-- **Score:** 40% reach, 30% intensity, 30% quantified cost (55/45 reach and intensity when no cost is stated).
-- **ROI:** payback model from the stated time costs, with assumed frequencies flagged, and small-sample warnings.
-- **Output:** autosaved projects, PDF (pdfkit) and Markdown brief. Four labelled sample interviews included.
-- **Style:** minimalist UI.
+Founders and product builders talk to customers, then guess which problem matters. ValueForge reads the interview notes and pulls out themes, how many people raised each one, pain intensity and the time costs people actually said out loud ("40 minutes", "6 reports a week"). It ranks the problems, shows verbatim quotes, builds a payback estimate and exports a PDF or Markdown brief.
+
+![ValueForge workspace analysing 6 real student interviews](docs/workspace.png)
+
+<table>
+<tr><td><img src="docs/home.png" alt="Home page"></td></tr>
+<tr><td align="center">Home</td></tr>
+</table>
+
+## Tested on real interviews
+
+The author interviewed **6 engineering students** about assignments, group projects, study material, interview prep and internship tracking, then ran the notes through ValueForge.
+
+| Result | Value |
+|---|---|
+| Interviews analysed | 6 (36 sentences) |
+| Time costs found and quantified | 6 of 6 |
+| Average time lost per student | **14.1 hours a month** |
+| Top problem | **No visibility or tracking**, raised by 4 of 6 students (score 61) |
+| Next | Cost and waste (51, single source), Tools that do not connect (43), Errors and rework (13) |
+
+Top evidence, verbatim: *"I spend around 90 minutes every day searching for coding questions, tracking my progress and deciding what topics to study next."*
+
+The brief also flagged that some themes came from one person only, and that six interviews are a set of hypotheses to test rather than a finding. The payback figure in the exported brief uses the author's own assumptions (a cost per hour, a build cost and a 50% reduction) and is an illustration, not a forecast.
+
+## How the analysis works
+
+No language model is used, so there is nothing to hallucinate and every quote is copied from the notes.
+
+- **Themes:** a lexicon of patterns (errors and rework, manual work, tools that do not connect, no visibility, cost and waste).
+- **Quantities:** a parser that understands "40 minutes every day", "twice a month", "another hour each time" and converts them to hours per person per month. Frequencies borrowed from a neighbouring sentence are marked as assumed.
+- **Score:** 40% reach (how many people), 30% pain intensity, 30% quantified cost. If nobody gave a cost, the weights become 55% reach and 45% intensity.
+- **Payback model:** people affected, cost per hour, expected reduction and build cost give monthly saving, payback month and first-year net.
+- **Warnings:** fewer than 5 interviews, single-source themes and assumed frequencies are all called out in the app and in the brief.
+
+```mermaid
+flowchart LR
+  N[Interview notes] --> P[Sentence splitter]
+  P --> T[Theme matcher]
+  P --> Q[Quantity parser]
+  T --> S[Weighted score]
+  Q --> S
+  S --> R[Ranked problems and quotes]
+  Q --> M[Payback model]
+  R --> O[PDF and Markdown brief]
+  M --> O
+```
 
 ## Honest limits
 
-Rules and lexicons miss phrasing they do not know. Eight interviews is a signal, not a statistic, and the app says so. ROI is only as good as the numbers people gave you.
+Pattern matching misses phrasing it does not know. Six interviews is a signal, not a statistic. The payback estimate is only as good as the numbers you enter.
 
-## Resume bullets (edit to taste)
+## Stack
 
-- Built ValueForge, a full-stack customer-discovery tool (Node, Express, React, SQLite) that converts interview notes into ranked problems and a payback model with PDF export.
-- Wrote a deterministic NLP pipeline (theme lexicon, quantity and duration parser, TF-IDF) so every claim traces to a verbatim quote; 13 automated tests.
+Node 22, Express 4, `node:sqlite`, pdfkit, React 18, Vite, Motion, Lenis. About 1,300 lines of application code.
 
-## Interview talking points
+## Run it
 
-- Why deterministic and quote-grounded beats an LLM summary for discovery work.
-- How the quantity parser handles "another hour each time" and elapsed time.
-- How the score weights change when no cost is mentioned, and why.
-
-## Run locally
-
-Requires Node 22.13 or newer (it uses the built-in `node:sqlite`).
+Needs Node 22.13 or newer (uses the built-in `node:sqlite`).
 
 ```bash
 npm install
-npm run dev      # API on :3000, Vite on :5173 (open the Vite URL)
-npm test         # node --test
-npm run build && npm start   # production, serves everything on :3000
+npm run dev                  # API on :3000, Vite dev server on :5173
+npm test                     # 14 automated tests
+npm run build && npm start   # production build, everything on :3000
 ```
 
 ## Deploy
 
-Any host that runs a Node web service or a Dockerfile works (Render, Railway, Fly.io, a VPS).
+Works on any host that runs a Node service or a Dockerfile (Render, Railway, Fly.io, a VPS).
 
-- Build command: `npm install && npm run build`. Start command: `npm start`. Or use the included `Dockerfile`.
-- Attach a **persistent disk** and point `DATA_DIR` at it (the Dockerfile uses `/data`). Without it, data is lost on each deploy.
-- Set `TRUST_PROXY=1` behind a platform proxy so the rate limiter sees real client IPs.
-- Put your contact email in `web/src/site.config.js` so the privacy and terms pages show it.
+| Setting | Value |
+|---|---|
+| Build / start | `npm install && npm run build` / `npm start`, or use the included `Dockerfile` |
+| `DATA_DIR` | A folder on a **persistent disk** (the Dockerfile uses `/data`). Without one, data resets on each deploy |
+| `TRUST_PROXY` | `1` behind a platform proxy, so rate limits see real client IPs |
+| `PORT` | Set by most hosts automatically |
 
-## Privacy model
+Put your contact email in `web/src/site.config.js` so the privacy and terms pages show it.
 
-No accounts and no cookies. Each browser gets a random ID stored in localStorage and sent as a header. Data is scoped to that ID and deleted automatically after the retention period shown in the app. Requests are rate limited and a strict Content-Security-Policy is set.
+## Privacy by design
+
+No accounts and no cookies. Each browser gets a random ID in localStorage, sent as a header, and every row is scoped to it. Data is deleted automatically after 60 days. Requests are rate limited and a strict Content-Security-Policy is set. The app has its own privacy and terms pages.
