@@ -12,6 +12,11 @@ Founders and product builders talk to customers, then guess which problem matter
 
 ![ValueForge workspace analysing 6 real student interviews](docs/workspace.png)
 
+<table>
+<tr><td><img src="docs/home.png" alt="Home page"></td></tr>
+<tr><td align="center">Home</td></tr>
+</table>
+
 ## The problem
 
 Customer interviews produce pages of notes and a gut feeling. The questions that decide what to build are harder: which problem did the most people raise, how much does it cost them, and what is solving it worth? A build decision made on the loudest anecdote is a guess. ValueForge makes the evidence countable and the quotes checkable.
